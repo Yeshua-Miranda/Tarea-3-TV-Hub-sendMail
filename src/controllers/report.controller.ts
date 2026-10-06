@@ -153,9 +153,23 @@ export const createReport: RequestHandler = async (request, response) => {
     const user = await User.findById(userId).select("email");
 
     // TODO V6 MAIL 3
-    // Después de persistir el Report, intenta enviar la notificación con
-    // sendReportCreatedEmail(...). Proporciona los datos necesarios y maneja el
-    // fallo localmente: el email es secundario y no debe revertir el Report.
+    try {
+      await sendReportCreatedEmail(
+        {
+          reason: report.reason,
+          description: report.description,
+          status: report.status,
+          createdAt: report.createdAt,
+          evidenceUrls: report.evidenceUrls,
+        },
+        channel.name,
+      );
+    } catch (error) {
+      console.error("Failed to send report created email:", error);
+    }
+
+    // Es mucho más importante que el Report se persista a que se emita el evento, 
+    // Al tenerlo ya guardado nos aseguramos y despues ponemos intentat mandar el correo una vez más
 
     // TODO V6 SOCKET 3:
     // Después de persistir el Report, emite report:created.
@@ -320,13 +334,29 @@ export const closeSupportReport: RequestHandler = async (request, response) => {
     { path: "userId", select: "email" },
   ]);
   const userId = getPopulatedUserId(report);
-  const reporter = report.userId as unknown as { email?: string };
+  const reporter = report.userId as unknown as { email: string };
   const channel = report.channelId as unknown as { name?: string };
 
-  // TODO V6 MAIL 4
-  // Si la resolución fue persistida, intenta notificarla con
-  // sendReportResolvedEmail(...). Un fallo de entrega no debe deshacer el
-  // status RESOLVED, resolvedAt ni resolvedBy ya guardados.
+  if (!wasAlreadyClosed) {
+    try {
+      await sendReportResolvedEmail(
+        {
+          reason: report.reason,
+          description: report.description,
+          status: report.status,
+          createdAt: report.createdAt,
+          resolvedAt: report.resolvedAt
+            ? new Date(report.resolvedAt)
+            : undefined,
+          evidenceUrls: report.evidenceUrls,
+        },
+        channel.name ?? "Unknown Channel",
+        reporter.email,
+      );
+    } catch (error) {
+      console.error("Failed to send report resolved email:", error);
+    }
+  }
 
   if (!wasAlreadyClosed) emitReportUpdated(userId, report.toObject());
   response.json({ report });

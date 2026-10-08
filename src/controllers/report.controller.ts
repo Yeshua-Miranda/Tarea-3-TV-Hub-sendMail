@@ -337,6 +337,10 @@ export const closeSupportReport: RequestHandler = async (request, response) => {
   const reporter = report.userId as unknown as { email: string };
   const channel = report.channelId as unknown as { name?: string };
 
+  // TODO V6 MAIL 4
+  // Si la resolución fue persistida, intenta notificarla con
+  // sendReportResolvedEmail(...). Un fallo de entrega no debe deshacer el
+  // status RESOLVED, resolvedAt ni resolvedBy ya guardados.
   if (!wasAlreadyClosed) {
     try {
       await sendReportResolvedEmail(
@@ -358,6 +362,10 @@ export const closeSupportReport: RequestHandler = async (request, response) => {
     }
   }
 
+  /*
+  ¿Por qué el correo de resolución no debería enviarse nuevamente si el Report ya estaba cerrado?
+  Para evitar enviar múltiples notificaciones de resolución al mismo usuario, lo que podría resultar confuso o molesto.
+  */
   if (!wasAlreadyClosed) emitReportUpdated(userId, report.toObject());
   response.json({ report });
 };

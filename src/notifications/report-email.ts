@@ -75,6 +75,9 @@ export async function sendReportCreatedEmail(report: ReportEmailData, channelNam
   });
 }
 
+// TODO V6 MAIL 2
+// Implementa la función sendReportResolvedEmail() que construya la notificación
+// de Report resuelto con los datos recibidos: canal, reason, descripción,
 export async function sendReportResolvedEmail(report: ReportEmailData, channelName: string, recipient: string): Promise<void> {
   await sendWithTransporter({
     from: env.smtpFrom,
